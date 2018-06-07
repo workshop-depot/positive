@@ -23,6 +23,14 @@ type (
 	MergeFunc = badger.MergeFunc
 )
 
+var (
+	// DefaultOptions .
+	DefaultOptions = badger.DefaultOptions
+
+	// DefaultIteratorOptions .
+	DefaultIteratorOptions = badger.DefaultIteratorOptions
+)
+
 //-----------------------------------------------------------------------------
 // ManagedDB
 
