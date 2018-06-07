@@ -1,4 +1,3 @@
-// Package kvw wraps badger kv store.
 package kvw
 
 import (
@@ -53,7 +52,7 @@ func (db *ManagedDB) NewTransaction(update bool) { db.ManagedDB.NewTransaction(u
 
 // NewTransactionAt .
 func (db *ManagedDB) NewTransactionAt(readTs uint64, update bool) *Txn {
-	return &Txn{Txn: db.ManagedDB.NewTransactionAt(readTs, update)}
+	return newTxn(db.ManagedDB.NewTransactionAt(readTs, update))
 }
 
 //-----------------------------------------------------------------------------
@@ -98,7 +97,7 @@ func (db *DB) Load(r io.Reader) error { return db.DB.Load(r) }
 
 // NewTransaction .
 func (db *DB) NewTransaction(update bool) *Txn {
-	return &Txn{Txn: db.DB.NewTransaction(update)}
+	return newTxn(db.DB.NewTransaction(update))
 }
 
 // RunValueLogGC .
@@ -115,14 +114,14 @@ func (db *DB) Tables() []badger.TableInfo { return db.DB.Tables() }
 // Update .
 func (db *DB) Update(fn func(txn *Txn) error) error {
 	return db.DB.Update(func(btxn *badger.Txn) error {
-		return fn(&Txn{Txn: btxn})
+		return fn(newTxn(btxn))
 	})
 }
 
 // View .
 func (db *DB) View(fn func(txn *Txn) error) error {
 	return db.DB.View(func(btxn *badger.Txn) error {
-		return fn(&Txn{Txn: btxn})
+		return fn(newTxn(btxn))
 	})
 }
 
@@ -132,6 +131,7 @@ func (db *DB) View(fn func(txn *Txn) error) error {
 // Txn .
 type Txn struct {
 	*badger.Txn
+	entries map[string][]byte
 }
 
 // Commit .
@@ -141,9 +141,6 @@ func (txn *Txn) Commit(callback func(error)) error { return txn.Txn.Commit(callb
 func (txn *Txn) CommitAt(commitTs uint64, callback func(error)) error {
 	return txn.Txn.CommitAt(commitTs, callback)
 }
-
-// Delete .
-func (txn *Txn) Delete(key []byte) error { return txn.Txn.Delete(key) }
 
 // Discard .
 func (txn *Txn) Discard() { txn.Txn.Discard() }
@@ -156,25 +153,93 @@ func (txn *Txn) NewIterator(opt IteratorOptions) *badger.Iterator {
 	return txn.Txn.NewIterator(opt)
 }
 
+// Delete .
+func (txn *Txn) Delete(key []byte) error {
+	if err := txn.Txn.Delete(key); err != nil {
+		return err
+	}
+	txn.note(key, nil)
+	return nil
+}
+
 // Set .
-func (txn *Txn) Set(key, val []byte) error { return txn.Txn.Set(key, val) }
+func (txn *Txn) Set(key, val []byte) error {
+	if err := txn.Txn.Set(key, val); err != nil {
+		return err
+	}
+	txn.note(key, val)
+	return nil
+}
 
 // SetEntry .
-func (txn *Txn) SetEntry(e *Entry) error { return txn.Txn.SetEntry(e) }
+func (txn *Txn) SetEntry(e *Entry) error {
+	if err := txn.Txn.SetEntry(e); err != nil {
+		return err
+	}
+	txn.note(e.Key, e.Value)
+	return nil
+}
 
 // SetWithDiscard .
 func (txn *Txn) SetWithDiscard(key, val []byte, meta byte) error {
-	return txn.Txn.SetWithDiscard(key, val, meta)
+	if err := txn.Txn.SetWithDiscard(key, val, meta); err != nil {
+		return err
+	}
+	txn.note(key, val)
+	return nil
 }
 
 // SetWithMeta .
 func (txn *Txn) SetWithMeta(key, val []byte, meta byte) error {
-	return txn.Txn.SetWithMeta(key, val, meta)
+	if err := txn.Txn.SetWithMeta(key, val, meta); err != nil {
+		return err
+	}
+	txn.note(key, val)
+	return nil
 }
 
 // SetWithTTL .
 func (txn *Txn) SetWithTTL(key, val []byte, dur time.Duration) error {
-	return txn.Txn.SetWithTTL(key, val, dur)
+	if err := txn.Txn.SetWithTTL(key, val, dur); err != nil {
+		return err
+	}
+	txn.note(key, val)
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+func newTxn(btxn *badger.Txn) (txn *Txn) {
+	txn = &Txn{Txn: btxn, entries: make(map[string][]byte)}
+	return
+}
+
+func (txn *Txn) note(key, val []byte) {
+	if txn.entries == nil {
+		return
+	}
+	txn.entries[string(key)] = val
+	return
+}
+
+// CommitWith .
+func (txn *Txn) CommitWith(beforeCommit func(*Txn, map[string][]byte) error, callback func(error)) error {
+	entries := txn.entries
+	txn.entries = nil
+	if err := beforeCommit(txn, entries); err != nil {
+		return err
+	}
+	return txn.Txn.Commit(callback)
+}
+
+// CommitAtWith .
+func (txn *Txn) CommitAtWith(commitTs uint64, beforeCommit func(*Txn, map[string][]byte) error, callback func(error)) error {
+	entries := txn.entries
+	txn.entries = nil
+	if err := beforeCommit(txn, entries); err != nil {
+		return err
+	}
+	return txn.Txn.CommitAt(commitTs, callback)
 }
 
 //-----------------------------------------------------------------------------
