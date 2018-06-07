@@ -150,7 +150,7 @@ func Test01(t *testing.T) {
 	}()
 }
 
-func Benchmark01(b *testing.B) {
+func BenchmarkOneSimpleSecondaryIndex(b *testing.B) {
 	sampleIndexBuilder := func(txn *Txn, entries map[string][]byte) error {
 		for k, v := range entries {
 			// all indexes must be built here,
@@ -160,6 +160,127 @@ func Benchmark01(b *testing.B) {
 				txn.Delete([]byte(ix))
 			} else {
 				txn.Set([]byte(ix), nil)
+			}
+		}
+		return nil
+	}
+
+	db := createDB("", false)
+	defer db.Close()
+
+	type post struct {
+		ID   string    `json:"id"`
+		Rev  string    `json:"rev"`
+		By   string    `json:"by,omitempty"`
+		Text string    `json:"text,omitempty"`
+		At   time.Time `json:"at,omitempty"`
+		Tags []string  `json:"tags,omitempty"`
+	}
+
+	var counter int64
+	b.Run("set", func(b *testing.B) {
+		wg := &sync.WaitGroup{}
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					id := atomic.AddInt64(&counter, 1)
+					p := &post{
+						ID:   fmt.Sprintf("POST:%010d", id),
+						By:   "Frodo Baggins",
+						Text: "Awesome blog post!",
+						At:   time.Now(),
+						Tags: []string{"golang", "nosql"},
+					}
+					js, _ := json.Marshal(p)
+
+					txn := db.NewTransaction(true)
+					defer txn.Discard()
+
+					txn.Set([]byte(p.ID), js)
+					txn.CommitWith(sampleIndexBuilder, nil)
+				}()
+			}
+		})
+		wg.Wait()
+	})
+
+	func() {
+		total := 0
+		db.View(func(txn *Txn) error {
+			opt := DefaultIteratorOptions
+			opt.PrefetchValues = false
+			itr := txn.NewIterator(opt)
+			for itr.Rewind(); itr.Valid(); itr.Next() {
+				total++
+			}
+			return nil
+		})
+		if total == 0 {
+			b.Error("no set records")
+		}
+	}()
+
+	counter = 0
+	b.Run("delete", func(b *testing.B) {
+		wg := &sync.WaitGroup{}
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					id := atomic.AddInt64(&counter, 1)
+					p := &post{
+						ID:   fmt.Sprintf("POST:%010d", id),
+						By:   "Frodo Baggins",
+						Text: "Awesome blog post!",
+						At:   time.Now(),
+						Tags: []string{"golang", "nosql"},
+					}
+
+					txn := db.NewTransaction(true)
+					defer txn.Discard()
+
+					txn.Delete([]byte(p.ID))
+					txn.CommitWith(sampleIndexBuilder, nil)
+				}()
+			}
+		})
+		wg.Wait()
+	})
+
+	func() {
+		total := 0
+		db.View(func(txn *Txn) error {
+			opt := DefaultIteratorOptions
+			opt.PrefetchValues = false
+			itr := txn.NewIterator(opt)
+			for itr.Rewind(); itr.Valid(); itr.Next() {
+				total++
+			}
+			return nil
+		})
+		if total != 0 {
+			b.Error("no delete records")
+		}
+	}()
+}
+
+func BenchmarkTenSimpleSecondaryIndexes(b *testing.B) {
+	b.ReportAllocs()
+
+	sampleIndexBuilder := func(txn *Txn, entries map[string][]byte) error {
+		for k, v := range entries {
+			// all indexes must be built here,
+			// based on document type (v), etc, etc.
+			for i := 0; i < 10; i++ {
+				ix := fmt.Sprintf("QQ:%03d"+k, i)
+				if v == nil {
+					txn.Delete([]byte(ix))
+				} else {
+					txn.Set([]byte(ix), nil)
+				}
 			}
 		}
 		return nil
