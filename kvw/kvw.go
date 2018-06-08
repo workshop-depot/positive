@@ -21,6 +21,9 @@ type (
 
 	// MergeFunc .
 	MergeFunc = badger.MergeFunc
+
+	// Item .
+	Item = badger.Item
 )
 
 var (
@@ -29,6 +32,9 @@ var (
 
 	// DefaultIteratorOptions .
 	DefaultIteratorOptions = badger.DefaultIteratorOptions
+
+	// ErrEmptyKey .
+	ErrEmptyKey = badger.ErrEmptyKey
 )
 
 //-----------------------------------------------------------------------------
