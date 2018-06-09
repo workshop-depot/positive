@@ -237,7 +237,7 @@ func (txn *Txn) note(key, val []byte) {
 }
 
 // CommitWith .
-func (txn *Txn) CommitWith(beforeCommit func(*Txn, map[string][]byte) error, callback func(error)) error {
+func (txn *Txn) CommitWith(beforeCommit BeforeCommit, callback func(error)) error {
 	entries := txn.entries
 	txn.entries = nil
 	if err := beforeCommit(txn, entries); err != nil {
@@ -247,7 +247,7 @@ func (txn *Txn) CommitWith(beforeCommit func(*Txn, map[string][]byte) error, cal
 }
 
 // CommitAtWith .
-func (txn *Txn) CommitAtWith(commitTs uint64, beforeCommit func(*Txn, map[string][]byte) error, callback func(error)) error {
+func (txn *Txn) CommitAtWith(commitTs uint64, beforeCommit BeforeCommit, callback func(error)) error {
 	entries := txn.entries
 	txn.entries = nil
 	if err := beforeCommit(txn, entries); err != nil {
@@ -255,5 +255,20 @@ func (txn *Txn) CommitAtWith(commitTs uint64, beforeCommit func(*Txn, map[string
 	}
 	return txn.Txn.CommitAt(commitTs, callback)
 }
+
+//-----------------------------------------------------------------------------
+
+// UpdateWith .
+func (db *DB) UpdateWith(fn func(txn *Txn) error, beforeCommit BeforeCommit) error {
+	txn := db.NewTransaction(true)
+	defer txn.Discard()
+	if err := fn(txn); err != nil {
+		return err
+	}
+	return txn.CommitWith(beforeCommit, nil)
+}
+
+// BeforeCommit .
+type BeforeCommit func(*Txn, map[string][]byte) error
 
 //-----------------------------------------------------------------------------

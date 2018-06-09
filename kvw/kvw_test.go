@@ -150,6 +150,93 @@ func Test01(t *testing.T) {
 	}()
 }
 
+func TestUpdateWith(t *testing.T) {
+	require := require.New(t)
+
+	sampleIndexBuilder := func(txn *Txn, entries map[string][]byte) error {
+		for k, v := range entries {
+			// all indexes must be built here,
+			// based on document type (v), etc, etc.
+			ix := "QQ:" + k
+			if v == nil {
+				require.NoError(txn.Delete([]byte(ix)))
+			} else {
+				require.NoError(txn.Set([]byte(ix), nil))
+			}
+		}
+		return nil
+	}
+
+	db := createDB("", false)
+	defer db.Close()
+
+	type post struct {
+		ID   string    `json:"id"`
+		Rev  string    `json:"rev"`
+		By   string    `json:"by,omitempty"`
+		Text string    `json:"text,omitempty"`
+		At   time.Time `json:"at,omitempty"`
+		Tags []string  `json:"tags,omitempty"`
+	}
+
+	func() {
+		p := &post{
+			ID:   "POST:001",
+			By:   "Frodo Baggins",
+			Text: "Awesome blog post!",
+			At:   time.Now(),
+			Tags: []string{"golang", "nosql"},
+		}
+		js, err := json.Marshal(p)
+		require.NoError(err)
+
+		err = db.UpdateWith(func(txn *Txn) error {
+			return txn.Set([]byte(p.ID), js)
+		}, sampleIndexBuilder)
+		require.NoError(err)
+	}()
+
+	func() {
+		got := make(map[string]bool)
+		err := db.View(func(txn *Txn) error {
+			itr := txn.NewIterator(DefaultIteratorOptions)
+			for itr.Rewind(); itr.Valid(); itr.Next() {
+				item := itr.Item()
+				got[string(item.Key())] = true
+			}
+			return nil
+		})
+		require.NoError(err)
+		require.Equal(2, len(got))
+		require.True(got["POST:001"])
+		require.True(got["QQ:POST:001"])
+	}()
+
+	func() {
+		err := db.UpdateWith(func(txn *Txn) error {
+			return txn.Delete([]byte("POST:001"))
+		}, sampleIndexBuilder)
+		require.NoError(err)
+
+	}()
+
+	func() {
+		got := make(map[string]bool)
+		err := db.View(func(txn *Txn) error {
+			itr := txn.NewIterator(DefaultIteratorOptions)
+			for itr.Rewind(); itr.Valid(); itr.Next() {
+				item := itr.Item()
+				got[string(item.Key())] = true
+			}
+			return nil
+		})
+		require.NoError(err)
+		require.Equal(0, len(got))
+		require.False(got["POST:001"])
+		require.False(got["QQ:POST:001"])
+	}()
+}
+
 func BenchmarkOneSimpleSecondaryIndex(b *testing.B) {
 	sampleIndexBuilder := func(txn *Txn, entries map[string][]byte) error {
 		for k, v := range entries {
