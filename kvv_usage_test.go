@@ -146,7 +146,7 @@ func TestEmit_simple(t *testing.T) {
 	func() {
 		got := make(map[string]kvv.Res)
 		err := db.View(func(txn *kvw.Txn) error {
-			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Prefix: []byte("nosql"), Start: []byte("nosql")}, txn)
+			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
 			if err != nil {
 				return err
 			}
@@ -157,14 +157,17 @@ func TestEmit_simple(t *testing.T) {
 		})
 		require.NoError(err)
 		for k, v := range got {
-			t.Logf("1st %s %s %s %s", k, v.Val, v.Index, v.Key)
+			require.Equal("POST:001", k)
+			require.Equal("POST:001", string(v.Key))
+			require.Equal("nosql", string(v.Index))
+			break
 		}
 	}()
 
 	func() {
 		got := make(map[string]kvv.Res)
 		err := db.View(func(txn *kvw.Txn) error {
-			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Prefix: []byte("golang")}, txn)
+			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
 			if err != nil {
 				return err
 			}
@@ -175,70 +178,10 @@ func TestEmit_simple(t *testing.T) {
 		})
 		require.NoError(err)
 		for k, v := range got {
-			t.Logf("%s %s %s %s", k, v.Val, v.Index, v.Key)
+			require.Equal("POST:001", k)
+			require.Equal("POST:001", string(v.Key))
+			require.Equal("golang", string(v.Index))
+			break
 		}
-	}()
-
-	func() {
-		got := make(map[string]kvv.Res)
-		err := db.View(func(txn *kvw.Txn) error {
-			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Prefix: []byte("nosql")}, txn)
-			if err != nil {
-				return err
-			}
-			for _, v := range r {
-				got[string(v.Key)] = v
-			}
-			return nil
-		})
-		require.NoError(err)
-		for k, v := range got {
-			t.Logf("2nd %s %s %s %s", k, v.Val, v.Index, v.Key)
-		}
-	}()
-
-	func() {
-		err := db.View(func(txn *kvw.Txn) error {
-			itr := txn.NewIterator(kvw.DefaultIteratorOptions)
-			defer itr.Close()
-			for itr.Seek([]byte("^d91c3bef076f8580")); itr.ValidForPrefix([]byte("^d91c3bef076f8580<^n")); itr.Next() {
-				itm := itr.Item()
-				k := itm.Key()
-				v, _ := itm.Value()
-				t.Logf("2 >> %s %s", k, v)
-			}
-			return nil
-		})
-		require.NoError(err)
-	}()
-
-	func() {
-		err := db.View(func(txn *kvw.Txn) error {
-			itr := txn.NewIterator(kvw.DefaultIteratorOptions)
-			defer itr.Close()
-			for itr.Seek([]byte("^d91c3bef076f8580")); itr.ValidForPrefix([]byte("^d91c3bef076f8580<^g")); itr.Next() {
-				itm := itr.Item()
-				k := itm.Key()
-				v, _ := itm.Value()
-				t.Logf("3 >> %s %s", k, v)
-			}
-			return nil
-		})
-		require.NoError(err)
-	}()
-
-	func() {
-		err := db.View(func(txn *kvw.Txn) error {
-			itr := txn.NewIterator(kvw.DefaultIteratorOptions)
-			defer itr.Close()
-			for itr.Rewind(); itr.Valid(); itr.Next() {
-				itm := itr.Item()
-				k := itm.Key()
-				v, _ := itm.Value()
-				t.Logf(">> %s %s", k, v)
-			}
-			return nil
-		})
-		require.NoError(err)
 	}()
 }
