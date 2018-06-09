@@ -309,3 +309,173 @@ func ExampleQueryIndex() {
 	// CMNT::002
 	// Frodo Baggins
 }
+
+func ExampleQueryIndex_with() {
+	db := createDB("", false)
+	defer db.Close()
+
+	check := func(err interface{}) {
+		if err == nil {
+			return
+		}
+		panic(err)
+	}
+
+	indexTags := NewIndex("tags", func(key, val []byte) (entries []IndexEntry, err error) {
+		var p comment
+		if err := json.Unmarshal(val, &p); err != nil {
+			return nil, err
+		}
+		if len(p.Tags) == 0 {
+			return
+		}
+		for _, v := range p.Tags {
+			entries = append(entries, IndexEntry{Key: []byte(v)})
+		}
+		return
+	})
+
+	indexBy := NewIndex("by", func(key, val []byte) (entries []IndexEntry, err error) {
+		var p comment
+		if err := json.Unmarshal(val, &p); err != nil {
+			return nil, err
+		}
+		if p.By == "" {
+			return
+		}
+		entries = append(entries, IndexEntry{Key: []byte(p.By)})
+		return
+	})
+
+	sampleIndexBuilder := func(txn *kvw.Txn, entries map[string][]byte) error {
+		for k, v := range entries {
+			// all indexes must be built here,
+			// based on document type (v), etc, etc.
+
+			if err := Emit(txn, indexTags, []byte(k), v); err != nil {
+				return err
+			}
+			if err := Emit(txn, indexBy, []byte(k), v); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	func() {
+		cmnt := comment{
+			ID:   "CMNT::001",
+			By:   "Frodo Baggins",
+			Text: "Hi!",
+			At:   time.Now(),
+			Tags: []string{"nosql"},
+		}
+		js, err := json.Marshal(cmnt)
+		check(err)
+
+		err = db.UpdateWith(func(txn *kvw.Txn) error {
+			return txn.Set([]byte(cmnt.ID), js)
+		}, sampleIndexBuilder)
+		check(err)
+	}()
+
+	func() {
+		cmnt := comment{
+			ID:   "CMNT::002",
+			By:   "Frodo Baggins",
+			Text: "Hi!",
+			At:   time.Now(),
+			Tags: []string{"nosql", "golang"},
+		}
+		js, err := json.Marshal(cmnt)
+		check(err)
+
+		err = db.UpdateWith(func(txn *kvw.Txn) error {
+			return txn.Set([]byte(cmnt.ID), js)
+		}, sampleIndexBuilder)
+		check(err)
+	}()
+
+	func() {
+		got := make(map[string]Res)
+		err := db.View(func(txn *kvw.Txn) error {
+			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
+			if err != nil {
+				return err
+			}
+			for _, v := range r {
+				got[string(v.Key)] = v
+			}
+			return nil
+		})
+		check(err)
+		fmt.Println(len(got))
+		for k, v := range got {
+			fmt.Println(k)
+			fmt.Println(string(v.Key))
+			fmt.Println(string(v.Index))
+		}
+	}()
+
+	func() {
+		got := make(map[string]Res)
+		err := db.View(func(txn *kvw.Txn) error {
+			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
+			if err != nil {
+				return err
+			}
+			for _, v := range r {
+				got[string(v.Key)] = v
+			}
+			return nil
+		})
+		check(err)
+		fmt.Println(len(got))
+		for k, v := range got {
+			fmt.Println(k)
+			fmt.Println(string(v.Key))
+			fmt.Println(string(v.Index))
+		}
+	}()
+
+	func() {
+		got := make(map[string]Res)
+		err := db.View(func(txn *kvw.Txn) error {
+			r, _, err := QueryIndex(Q{Index: "by", Start: []byte("Frodo Baggins"), Prefix: []byte("Frodo Baggins")}, txn)
+			if err != nil {
+				return err
+			}
+			for _, v := range r {
+				got[string(v.Key)] = v
+			}
+			return nil
+		})
+		check(err)
+		fmt.Println(len(got))
+		for k, v := range got {
+			fmt.Println(k)
+			fmt.Println(string(v.Key))
+			fmt.Println(string(v.Index))
+		}
+	}()
+
+	// Output:
+	// 2
+	// CMNT::001
+	// CMNT::001
+	// nosql
+	// CMNT::002
+	// CMNT::002
+	// nosql
+	// 1
+	// CMNT::002
+	// CMNT::002
+	// golang
+	// 2
+	// CMNT::001
+	// CMNT::001
+	// Frodo Baggins
+	// CMNT::002
+	// CMNT::002
+	// Frodo Baggins
+}
