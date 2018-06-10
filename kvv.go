@@ -1,3 +1,4 @@
+// Package kvv provides a secondary index layer for badger key-value store - see examples.
 package kvv
 
 import (

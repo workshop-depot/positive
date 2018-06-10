@@ -1,3 +1,4 @@
+// Package kvw wraps badger kv store for adding utilities.
 package kvw
 
 import (
