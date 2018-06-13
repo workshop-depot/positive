@@ -33,9 +33,6 @@ var (
 
 	// DefaultIteratorOptions .
 	DefaultIteratorOptions = badger.DefaultIteratorOptions
-
-	// ErrEmptyKey .
-	ErrEmptyKey = badger.ErrEmptyKey
 )
 
 //-----------------------------------------------------------------------------
