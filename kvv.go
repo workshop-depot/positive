@@ -60,8 +60,8 @@ func Emit(txn *kvw.Txn, ix *Index, key, val []byte) (reserr error) {
 	var toDelete [][]byte
 	for itr.Seek(prefix); itr.ValidForPrefix(prefix); itr.Next() {
 		item := itr.Item()
-		k := item.Key()
-		v, err := item.Value()
+		k := item.KeyCopy(nil)
+		v, err := item.ValueCopy(nil)
 		if err != nil {
 			reserr = err
 			return
@@ -191,7 +191,7 @@ func QueryIndex(params Q, txn *kvw.Txn, forIndexedKeys ...bool) (reslist []Res, 
 	}
 
 	qfn := func(txn *kvw.Txn) error {
-		var opt kvw.IteratorOptions
+		var opt = kvw.DefaultIteratorOptions
 		opt.PrefetchValues = true
 		opt.PrefetchSize = limit
 		return itrFunc(txn, opt, start, prefix, body)
