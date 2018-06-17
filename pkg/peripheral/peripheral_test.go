@@ -79,7 +79,7 @@ func ExampleNewIndex() {
 			return
 		}
 		for _, v := range p.Tags {
-			entries = append(entries, IndexEntry{Key: []byte(v)})
+			entries = append(entries, IndexEntry{Index: []byte(v)})
 		}
 		return
 	})
@@ -90,7 +90,7 @@ func ExampleNewIndex() {
 		if p.By == "" {
 			return
 		}
-		entries = append(entries, IndexEntry{Key: []byte(p.By)})
+		entries = append(entries, IndexEntry{Index: []byte(p.By)})
 		return
 	})
 
@@ -155,7 +155,7 @@ func ExampleQueryIndex() {
 			return
 		}
 		for _, v := range p.Tags {
-			entries = append(entries, IndexEntry{Key: []byte(v)})
+			entries = append(entries, IndexEntry{Index: []byte(v)})
 		}
 		return
 	})
@@ -168,7 +168,7 @@ func ExampleQueryIndex() {
 		if p.By == "" {
 			return
 		}
-		entries = append(entries, IndexEntry{Key: []byte(p.By)})
+		entries = append(entries, IndexEntry{Index: []byte(p.By)})
 		return
 	})
 
@@ -349,7 +349,7 @@ func ExampleQueryIndex_with() {
 			return
 		}
 		for _, v := range p.Tags {
-			entries = append(entries, IndexEntry{Key: []byte(v)})
+			entries = append(entries, IndexEntry{Index: []byte(v)})
 		}
 		return
 	})
@@ -362,7 +362,7 @@ func ExampleQueryIndex_with() {
 		if p.By == "" {
 			return
 		}
-		entries = append(entries, IndexEntry{Key: []byte(p.By)})
+		entries = append(entries, IndexEntry{Index: []byte(p.By)})
 		return
 	})
 

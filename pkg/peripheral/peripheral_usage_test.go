@@ -83,7 +83,7 @@ func TestEmit_simple(t *testing.T) {
 			return
 		}
 		for _, v := range p.Tags {
-			entries = append(entries, peripheral.IndexEntry{Key: []byte(v)})
+			entries = append(entries, peripheral.IndexEntry{Index: []byte(v)})
 		}
 		return
 	})

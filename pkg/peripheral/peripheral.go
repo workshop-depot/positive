@@ -14,7 +14,7 @@ import (
 
 // IndexEntry .
 type IndexEntry struct {
-	Key, Val []byte
+	Index, Val []byte
 }
 
 // IndexFn .
@@ -89,7 +89,7 @@ func Emit(txn *layer.Txn, ix *Index, key, val []byte) (reserr error) {
 	}
 
 	for _, kv := range indexEntries {
-		wix := indexSpace + string(kv.Key)
+		wix := indexSpace + string(kv.Index)
 		k2x := preppedk + wix
 		x2k := partx2k + wix + markedKey
 		if reserr = txn.Set([]byte(k2x), []byte(x2k)); reserr != nil {
