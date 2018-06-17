@@ -1,4 +1,4 @@
-package kvv
+package peripheral
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/dc0d/kvv/kvw"
+	"github.com/dc0d/positive/pkg/layer"
 )
 
 func mkdir(d string) {
@@ -20,7 +20,7 @@ func mkdir(d string) {
 	}
 }
 
-func createDB(databaseDir string, deleteExisting bool) *kvw.DB {
+func createDB(databaseDir string, deleteExisting bool) *layer.DB {
 	if databaseDir == "" {
 		databaseDir, _ = ioutil.TempDir(os.TempDir(), "database")
 	} else {
@@ -48,10 +48,10 @@ func createDB(databaseDir string, deleteExisting bool) *kvw.DB {
 	mkdir(index)
 	mkdir(data)
 
-	var opts = kvw.DefaultOptions
+	var opts = layer.DefaultOptions
 	opts.Dir = index
 	opts.ValueDir = data
-	preppedDB, err := kvw.Open(opts)
+	preppedDB, err := layer.Open(opts)
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +94,7 @@ func ExampleNewIndex() {
 		return
 	})
 
-	sampleIndexBuilder := func(txn *kvw.Txn, entries map[string][]byte) error {
+	sampleIndexBuilder := func(txn *layer.Txn, entries map[string][]byte) error {
 		for k, v := range entries {
 			// all indexes must be built here,
 			// based on document type (v), etc, etc.
@@ -172,7 +172,7 @@ func ExampleQueryIndex() {
 		return
 	})
 
-	sampleIndexBuilder := func(txn *kvw.Txn, entries map[string][]byte) error {
+	sampleIndexBuilder := func(txn *layer.Txn, entries map[string][]byte) error {
 		for k, v := range entries {
 			// all indexes must be built here,
 			// based on document type (v), etc, etc.
@@ -229,7 +229,7 @@ func ExampleQueryIndex() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
 			if err != nil {
 				return err
@@ -256,7 +256,7 @@ func ExampleQueryIndex() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
 			if err != nil {
 				return err
@@ -283,7 +283,7 @@ func ExampleQueryIndex() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "by", Start: []byte("Frodo Baggins"), Prefix: []byte("Frodo Baggins")}, txn)
 			if err != nil {
 				return err
@@ -366,7 +366,7 @@ func ExampleQueryIndex_with() {
 		return
 	})
 
-	sampleIndexBuilder := func(txn *kvw.Txn, entries map[string][]byte) error {
+	sampleIndexBuilder := func(txn *layer.Txn, entries map[string][]byte) error {
 		for k, v := range entries {
 			// all indexes must be built here,
 			// based on document type (v), etc, etc.
@@ -392,7 +392,7 @@ func ExampleQueryIndex_with() {
 		js, err := json.Marshal(cmnt)
 		check(err)
 
-		err = db.UpdateWith(func(txn *kvw.Txn) error {
+		err = db.UpdateWith(func(txn *layer.Txn) error {
 			return txn.Set([]byte(cmnt.ID), js)
 		}, sampleIndexBuilder)
 		check(err)
@@ -409,7 +409,7 @@ func ExampleQueryIndex_with() {
 		js, err := json.Marshal(cmnt)
 		check(err)
 
-		err = db.UpdateWith(func(txn *kvw.Txn) error {
+		err = db.UpdateWith(func(txn *layer.Txn) error {
 			return txn.Set([]byte(cmnt.ID), js)
 		}, sampleIndexBuilder)
 		check(err)
@@ -417,7 +417,7 @@ func ExampleQueryIndex_with() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
 			if err != nil {
 				return err
@@ -444,7 +444,7 @@ func ExampleQueryIndex_with() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
 			if err != nil {
 				return err
@@ -471,7 +471,7 @@ func ExampleQueryIndex_with() {
 
 	func() {
 		got := make(map[string]Res)
-		err := db.View(func(txn *kvw.Txn) error {
+		err := db.View(func(txn *layer.Txn) error {
 			r, _, err := QueryIndex(Q{Index: "by", Start: []byte("Frodo Baggins"), Prefix: []byte("Frodo Baggins")}, txn)
 			if err != nil {
 				return err

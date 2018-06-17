@@ -1,4 +1,4 @@
-package kvw
+package layer
 
 import (
 	"github.com/dgraph-io/badger"

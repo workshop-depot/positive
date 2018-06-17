@@ -1,4 +1,4 @@
-package kvw
+package layer
 
 import (
 	"encoding/json"

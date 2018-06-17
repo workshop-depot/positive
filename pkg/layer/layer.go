@@ -1,5 +1,5 @@
-// Package kvw wraps badger kv store for adding utilities.
-package kvw
+// Package layer wraps badger kv store for adding utilities.
+package layer
 
 import (
 	"io"

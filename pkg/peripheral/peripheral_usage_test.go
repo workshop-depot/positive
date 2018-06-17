@@ -1,4 +1,4 @@
-package kvv_test
+package peripheral_test
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dc0d/kvv"
-	"github.com/dc0d/kvv/kvw"
+	"github.com/dc0d/positive/pkg/layer"
+	"github.com/dc0d/positive/pkg/peripheral"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func mkdir(d string) {
 	}
 }
 
-func createDB(databaseDir string, deleteExisting bool) *kvw.DB {
+func createDB(databaseDir string, deleteExisting bool) *layer.DB {
 	if databaseDir == "" {
 		databaseDir, _ = ioutil.TempDir(os.TempDir(), "database")
 	} else {
@@ -50,10 +50,10 @@ func createDB(databaseDir string, deleteExisting bool) *kvw.DB {
 	mkdir(index)
 	mkdir(data)
 
-	var opts = kvw.DefaultOptions
+	var opts = layer.DefaultOptions
 	opts.Dir = index
 	opts.ValueDir = data
-	preppedDB, err := kvw.Open(opts)
+	preppedDB, err := layer.Open(opts)
 	if err != nil {
 		panic(err)
 	}
@@ -76,24 +76,24 @@ func TestEmit_simple(t *testing.T) {
 		Tags []string  `json:"tags,omitempty"`
 	}
 
-	indexTags := kvv.NewIndex("tags", func(key, val []byte) (entries []kvv.IndexEntry, err error) {
+	indexTags := peripheral.NewIndex("tags", func(key, val []byte) (entries []peripheral.IndexEntry, err error) {
 		var p post
 		json.Unmarshal(val, &p)
 		if len(p.Tags) == 0 {
 			return
 		}
 		for _, v := range p.Tags {
-			entries = append(entries, kvv.IndexEntry{Key: []byte(v)})
+			entries = append(entries, peripheral.IndexEntry{Key: []byte(v)})
 		}
 		return
 	})
 
-	sampleIndexBuilder := func(txn *kvw.Txn, entries map[string][]byte) error {
+	sampleIndexBuilder := func(txn *layer.Txn, entries map[string][]byte) error {
 		for k, v := range entries {
 			// all indexes must be built here,
 			// based on document type (v), etc, etc.
 
-			if err := kvv.Emit(txn, indexTags, []byte(k), v); err != nil {
+			if err := peripheral.Emit(txn, indexTags, []byte(k), v); err != nil {
 				return err
 			}
 		}
@@ -122,8 +122,8 @@ func TestEmit_simple(t *testing.T) {
 
 	func() {
 		got := make(map[string]bool)
-		err := db.View(func(txn *kvw.Txn) error {
-			itr := txn.NewIterator(kvw.DefaultIteratorOptions)
+		err := db.View(func(txn *layer.Txn) error {
+			itr := txn.NewIterator(layer.DefaultIteratorOptions)
 			for itr.Rewind(); itr.Valid(); itr.Next() {
 				item := itr.Item()
 				got[string(item.Key())] = true
@@ -144,9 +144,9 @@ func TestEmit_simple(t *testing.T) {
 	}()
 
 	func() {
-		got := make(map[string]kvv.Res)
-		err := db.View(func(txn *kvw.Txn) error {
-			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
+		got := make(map[string]peripheral.Res)
+		err := db.View(func(txn *layer.Txn) error {
+			r, _, err := peripheral.QueryIndex(peripheral.Q{Index: "tags", Start: []byte("nosql"), Prefix: []byte("nosql")}, txn)
 			if err != nil {
 				return err
 			}
@@ -165,9 +165,9 @@ func TestEmit_simple(t *testing.T) {
 	}()
 
 	func() {
-		got := make(map[string]kvv.Res)
-		err := db.View(func(txn *kvw.Txn) error {
-			r, _, err := kvv.QueryIndex(kvv.Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
+		got := make(map[string]peripheral.Res)
+		err := db.View(func(txn *layer.Txn) error {
+			r, _, err := peripheral.QueryIndex(peripheral.Q{Index: "tags", Start: []byte("golang"), Prefix: []byte("golang")}, txn)
 			if err != nil {
 				return err
 			}

@@ -1,5 +1,5 @@
-// Package kvv provides a secondary index layer for badger key-value store - see examples.
-package kvv
+// Package peripheral provides a secondary index layer for badger key-value store - see examples.
+package peripheral
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"github.com/dc0d/kvv/kvw"
+	"github.com/dc0d/positive/pkg/layer"
 )
 
 //-----------------------------------------------------------------------------
@@ -43,14 +43,14 @@ func NewIndex(name string, indexFn IndexFn) (res *Index) {
 //-----------------------------------------------------------------------------
 
 // Emit .
-func Emit(txn *kvw.Txn, ix *Index, key, val []byte) (reserr error) {
+func Emit(txn *layer.Txn, ix *Index, key, val []byte) (reserr error) {
 	partk2x := indexSpace + ix.hash + indexK2X
 	partx2k := indexSpace + ix.hash + indexX2K
 
 	markedKey := indexSpace + string(key)
 	preppedk := partk2x + markedKey
 
-	opt := kvw.DefaultIteratorOptions
+	opt := layer.DefaultIteratorOptions
 	opt.PrefetchValues = false
 
 	// delete previously calculated index for this key
@@ -71,7 +71,7 @@ func Emit(txn *kvw.Txn, ix *Index, key, val []byte) (reserr error) {
 	}
 	for _, v := range toDelete {
 		if err := txn.Delete(v); err != nil {
-			if err != kvw.ErrEmptyKey {
+			if err != layer.ErrEmptyKey {
 				reserr = err
 				return
 			}
@@ -117,7 +117,7 @@ var (
 )
 
 // QueryIndex .
-func QueryIndex(params Q, txn *kvw.Txn, forIndexedKeys ...bool) (reslist []Res, rescount int, reserr error) {
+func QueryIndex(params Q, txn *layer.Txn, forIndexedKeys ...bool) (reslist []Res, rescount int, reserr error) {
 	params.init()
 	if params.Index == "" {
 		reserr = ErrNoIndexNameProvided
@@ -128,7 +128,7 @@ func QueryIndex(params Q, txn *kvw.Txn, forIndexedKeys ...bool) (reslist []Res, 
 
 	skip, limit, applySkip, applyLimit := getlimits(params)
 
-	body := func(itr interface{ Item() *kvw.Item }) error {
+	body := func(itr interface{ Item() *layer.Item }) error {
 		if params.Count {
 			rescount++
 			skip--
@@ -190,8 +190,8 @@ func QueryIndex(params Q, txn *kvw.Txn, forIndexedKeys ...bool) (reslist []Res, 
 		return nil
 	}
 
-	qfn := func(txn *kvw.Txn) error {
-		var opt = kvw.DefaultIteratorOptions
+	qfn := func(txn *layer.Txn) error {
+		var opt = layer.DefaultIteratorOptions
 		opt.PrefetchValues = true
 		opt.PrefetchSize = limit
 		return itrFunc(txn, opt, start, prefix, body)
@@ -209,10 +209,10 @@ func QueryIndex(params Q, txn *kvw.Txn, forIndexedKeys ...bool) (reslist []Res, 
 	return
 }
 
-func itrFunc(txn *kvw.Txn,
-	opt kvw.IteratorOptions,
+func itrFunc(txn *layer.Txn,
+	opt layer.IteratorOptions,
 	start, prefix []byte,
-	bodyFunc func(itr interface{ Item() *kvw.Item }) error) error {
+	bodyFunc func(itr interface{ Item() *layer.Item }) error) error {
 	itr := txn.NewIterator(opt)
 	defer itr.Close()
 	for itr.Seek(start); itr.ValidForPrefix(prefix); itr.Next() {
