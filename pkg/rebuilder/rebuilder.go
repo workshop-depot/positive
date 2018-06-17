@@ -12,11 +12,10 @@ import (
 
 // Options for *Rebuilder.
 type Options struct {
-	DB           *layer.DB
-	BatchSize    int
-	DBVersion    uint64
-	IndexName    string
-	IndexBuilder func(txn *layer.Txn, entries map[string][]byte) error
+	DB        *layer.DB
+	BatchSize int
+	DBVersion uint64
+	IndexName string
 }
 
 // New creates new *Rebuilder.
@@ -27,15 +26,14 @@ func New(opt Options) *Rebuilder {
 	if opt.BatchSize <= 0 {
 		opt.BatchSize = 300
 	}
-	if opt.DB == nil || opt.IndexBuilder == nil {
-		panic(".DB and .IndexBuilder must be provided")
+	if opt.DB == nil {
+		panic(".DB must be provided")
 	}
 	res := &Rebuilder{
-		db:           opt.DB,
-		batchSize:    opt.BatchSize,
-		dbVersion:    opt.DBVersion,
-		indexName:    opt.IndexName,
-		indexBuilder: opt.IndexBuilder,
+		db:        opt.DB,
+		batchSize: opt.BatchSize,
+		dbVersion: opt.DBVersion,
+		indexName: opt.IndexName,
 	}
 
 	b := make([]byte, 8)
@@ -53,11 +51,10 @@ func New(opt Options) *Rebuilder {
 
 // Rebuilder .
 type Rebuilder struct {
-	db           *layer.DB
-	batchSize    int
-	dbVersion    uint64
-	indexName    string
-	indexBuilder func(txn *layer.Txn, entries map[string][]byte) error
+	db        *layer.DB
+	batchSize int
+	dbVersion uint64
+	indexName string
 
 	rebuilderIndex *peripheral.Index
 	header         string
@@ -68,7 +65,7 @@ type Rebuilder struct {
 func (rr *Rebuilder) Index() *peripheral.Index { return rr.rebuilderIndex }
 
 // Rebuild .
-func (rr *Rebuilder) Rebuild() error {
+func (rr *Rebuilder) Rebuild(indexBuilder layer.BeforeCommit) error {
 	var ver uint64
 	for ver = 0; ver < rr.dbVersion; ver++ {
 		b := make([]byte, 8)
@@ -104,7 +101,7 @@ func (rr *Rebuilder) Rebuild() error {
 					}
 				}
 				return nil
-			}, rr.indexBuilder)
+			}, indexBuilder)
 			if err != nil {
 				return err
 			}

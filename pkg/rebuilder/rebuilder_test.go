@@ -96,9 +96,8 @@ func TestEmit_simple(t *testing.T) {
 
 	initIndices := func() {
 		_rebuilder = New(Options{
-			DB:           db,
-			IndexBuilder: indexBuilder,
-			DBVersion:    dbVersion,
+			DB:        db,
+			DBVersion: dbVersion,
 		})
 		indices = append(indices, _rebuilder.Index())
 	}
@@ -144,9 +143,8 @@ func TestEmit_simple(t *testing.T) {
 	dbVersion++
 	initIndices = func() {
 		_rebuilder = New(Options{
-			DB:           db,
-			IndexBuilder: indexBuilder,
-			DBVersion:    dbVersion,
+			DB:        db,
+			DBVersion: dbVersion,
 		})
 
 		indexTime := peripheral.NewIndex("itemat", func(key, val []byte) (entries []peripheral.IndexEntry, err error) {
@@ -181,7 +179,7 @@ func TestEmit_simple(t *testing.T) {
 	})
 	require.Equal(40, cnt)
 
-	require.NoError(_rebuilder.Rebuild())
+	require.NoError(_rebuilder.Rebuild(indexBuilder))
 
 	cnt = 0
 	db.View(func(txn *layer.Txn) error {
