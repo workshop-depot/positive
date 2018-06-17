@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/dc0d/kvv/kvw"
@@ -240,7 +241,13 @@ func ExampleQueryIndex() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
@@ -261,7 +268,13 @@ func ExampleQueryIndex() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
@@ -282,7 +295,13 @@ func ExampleQueryIndex() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
@@ -410,7 +429,13 @@ func ExampleQueryIndex_with() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
@@ -431,7 +456,13 @@ func ExampleQueryIndex_with() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
@@ -452,7 +483,13 @@ func ExampleQueryIndex_with() {
 		})
 		check(err)
 		fmt.Println(len(got))
-		for k, v := range got {
+		var keys []string
+		for k := range got {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := got[k]
 			fmt.Println(k)
 			fmt.Println(string(v.Key))
 			fmt.Println(string(v.Index))
